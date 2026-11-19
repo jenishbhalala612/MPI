@@ -2,6 +2,13 @@ import { Injectable } from '@angular/core';
 import { PDFDocument, PDFFont, rgb, StandardFonts } from 'pdf-lib';
 import { MPISheetRequest } from '../models/mpi.models';
 
+export interface PreparedPdfPoint {
+  index: number;
+  text: string;
+  wrapped: string[];
+  height: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -22,13 +29,57 @@ export class MpiPdfGeneratorService {
       .map(p => p.trim())
       .filter(p => p.length > 0);
 
+    const pointMaxW = 595.28 - 20 * 2 - 36; // contentWidth - 36 = 519.28 pt
+    const preparedPoints: PreparedPdfPoint[] = [];
+
+    let ptIdx = 0;
+    for (const raw of rawPoints) {
+      // Strip any duplicate user-typed bullet or number prefix: "1. ", "1) ", "- ", "• ", "* ", "1: "
+      const clean = raw.replace(/^(\d+[\.\)\-:]|\*|\-|•|▪|–)\s+/, '').trim();
+      if (!clean) continue;
+      const wrapped = this.splitIntoLines(clean, fontRegular, 8.5, pointMaxW);
+      // Height = wrapped lines * line height (11.5) + point bottom gap (3.5)
+      const height = wrapped.length * 11.5 + 3.5;
+      preparedPoints.push({
+        index: ptIdx++,
+        text: clean,
+        wrapped,
+        height
+      });
+    }
+
     const formattedDate = this.getFormattedMonthYear(request.date);
 
-    // Limit page 1 to 30 points (matching QuestPDF template)
-    const page1Limit = 30;
-    const page1Points = rawPoints.slice(0, page1Limit);
-    const overflowPoints = rawPoints.slice(page1Limit);
-    const totalPages = overflowPoints.length > 0 ? 2 : 1;
+    // Usable vertical heights inside boxes:
+    // Page 1 points box: height 548pt, usable = 548 - 14 - 12 = 522pt
+    // Page 2+ points box: usable = (curY - 14) - (boxY + 12) = 782.89 - 44 = 738.89pt
+    const page1AvailableHeight = 522;
+    const overflowPageAvailableHeight = 735;
+
+    const pagesPoints: PreparedPdfPoint[][] = [];
+    let currentPagePoints: PreparedPdfPoint[] = [];
+    let currentUsedHeight = 0;
+    let currentLimit = page1AvailableHeight;
+
+    for (const pt of preparedPoints) {
+      const neededHeight = pt.wrapped.length * 11.5;
+      if (currentPagePoints.length === 0 || currentUsedHeight + neededHeight <= currentLimit) {
+        currentPagePoints.push(pt);
+        currentUsedHeight += pt.height;
+      } else {
+        // Page 1 is filled completely before going to next page
+        pagesPoints.push(currentPagePoints);
+        currentPagePoints = [pt];
+        currentLimit = overflowPageAvailableHeight;
+        currentUsedHeight = pt.height;
+      }
+    }
+
+    if (currentPagePoints.length > 0 || pagesPoints.length === 0) {
+      pagesPoints.push(currentPagePoints);
+    }
+
+    const totalPages = pagesPoints.length;
 
     // --- PAGE 1 ---
     const page1 = doc.addPage([595.28, 841.89]);
@@ -38,24 +89,23 @@ export class MpiPdfGeneratorService {
       1,
       totalPages,
       request,
-      page1Points,
+      pagesPoints[0] || [],
       formattedDate,
       fontRegular,
       fontBold,
-      fontItalic,
-      overflowPoints.length > 0
+      fontItalic
     );
 
-    // --- PAGE 2+ (Overflow if points exceed page 1 limit) ---
-    if (overflowPoints.length > 0) {
-      const page2 = doc.addPage([595.28, 841.89]);
+    // --- PAGE 2+ (Overflow pages if points exceed page 1 limit) ---
+    for (let p = 1; p < pagesPoints.length; p++) {
+      const overflowPage = doc.addPage([595.28, 841.89]);
       this.renderOverflowPage(
         doc,
-        page2,
-        2,
+        overflowPage,
+        p + 1,
         totalPages,
         request,
-        overflowPoints,
+        pagesPoints[p],
         formattedDate,
         fontRegular,
         fontBold,
@@ -81,12 +131,11 @@ export class MpiPdfGeneratorService {
     pageNumber: number,
     totalPages: number,
     request: MPISheetRequest,
-    points: string[],
+    points: PreparedPdfPoint[],
     formattedDate: string,
     fontRegular: PDFFont,
     fontBold: PDFFont,
-    fontItalic: PDFFont,
-    hasMoreOnPage2: boolean
+    fontItalic: PDFFont
   ): void {
     const { width, height } = page.getSize();
     const marginX = 20;
@@ -145,18 +194,6 @@ export class MpiPdfGeneratorService {
       color: rgb(1, 1, 1)
     });
 
-    if (hasMoreOnPage2) {
-      const contText = '[Continued on Page 2]';
-      const contWidth = fontItalic.widthOfTextAtSize(contText, 7.5);
-      page.drawText(contText, {
-        x: width - marginX - contWidth - 8,
-        y: curY - 12,
-        size: 7.5,
-        font: fontItalic,
-        color: blueDark
-      });
-    }
-
     if (points.length === 0) {
       page.drawText('No points provided.', {
         x: marginX + 10,
@@ -167,22 +204,27 @@ export class MpiPdfGeneratorService {
       });
     } else {
       let pY = curY - 14;
-      const pointMaxW = contentWidth - 28;
+      const numberX = marginX + 8;
+      const textX = marginX + 26;
 
       for (const pt of points) {
         if (pY < pointsBoxY + 12) break;
 
-        // Draw crisp blue triangle bullet ▶
-        const triX = marginX + 7;
-        const triY = pY + 2.5;
-        const path = `M ${triX} ${triY - 2.5} L ${triX + 4.5} ${triY} L ${triX} ${triY + 2.5} Z`;
-        page.drawSvgPath(path, { color: blueDark });
+        // Draw point number in bold blue (e.g. "1.", "2.", "15.")
+        const numStr = `${pt.index + 1}.`;
+        page.drawText(numStr, {
+          x: numberX,
+          y: pY,
+          size: 8.5,
+          font: fontBold,
+          color: blueDark
+        });
 
-        const wrapped = this.splitIntoLines(pt, fontRegular, 8.5, pointMaxW);
-        for (let l = 0; l < wrapped.length; l++) {
+        // Draw wrapped lines indented at textX for clean hanging indent
+        for (let l = 0; l < pt.wrapped.length; l++) {
           if (pY < pointsBoxY + 10) break;
-          page.drawText(wrapped[l], {
-            x: marginX + 17,
+          page.drawText(pt.wrapped[l], {
+            x: textX,
             y: pY,
             size: 8.5,
             font: fontRegular,
@@ -190,7 +232,7 @@ export class MpiPdfGeneratorService {
           });
           pY -= 11.5;
         }
-        pY -= 1.0;
+        pY -= 3.5;
       }
     }
 
@@ -458,7 +500,7 @@ export class MpiPdfGeneratorService {
     pageNumber: number,
     totalPages: number,
     request: MPISheetRequest,
-    points: string[],
+    points: PreparedPdfPoint[],
     formattedDate: string,
     fontRegular: PDFFont,
     fontBold: PDFFont,
@@ -505,9 +547,9 @@ export class MpiPdfGeneratorService {
     });
     curY -= 8;
 
-    // Overflow Points Box (takes almost full page)
-    const boxHeight = height - marginY * 2 - 35 - 25;
+    // Overflow Points Box (takes full remaining page height down to footer)
     const boxY = marginY + 20;
+    const boxHeight = curY - boxY;
 
     page.drawRectangle({
       x: marginX,
@@ -519,32 +561,28 @@ export class MpiPdfGeneratorService {
       color: rgb(1, 1, 1)
     });
 
-    const contText = '[Points Continued from Page 1]';
-    const contWidth = fontItalic.widthOfTextAtSize(contText, 7.5);
-    page.drawText(contText, {
-      x: width - marginX - contWidth - 8,
-      y: curY - 12,
-      size: 7.5,
-      font: fontItalic,
-      color: blueDark
-    });
-
     let pY = curY - 14;
-    const pointMaxW = contentWidth - 28;
+    const numberX = marginX + 8;
+    const textX = marginX + 26;
 
     for (const pt of points) {
       if (pY < boxY + 12) break;
 
-      const triX = marginX + 7;
-      const triY = pY + 2.5;
-      const path = `M ${triX} ${triY - 2.5} L ${triX + 4.5} ${triY} L ${triX} ${triY + 2.5} Z`;
-      page.drawSvgPath(path, { color: blueDark });
+      // Draw point number in bold blue (e.g. "29.", "30.", etc.)
+      const numStr = `${pt.index + 1}.`;
+      page.drawText(numStr, {
+        x: numberX,
+        y: pY,
+        size: 8.5,
+        font: fontBold,
+        color: blueDark
+      });
 
-      const wrapped = this.splitIntoLines(pt, fontRegular, 8.5, pointMaxW);
-      for (let l = 0; l < wrapped.length; l++) {
+      // Draw wrapped lines indented at textX for clean hanging indent
+      for (let l = 0; l < pt.wrapped.length; l++) {
         if (pY < boxY + 10) break;
-        page.drawText(wrapped[l], {
-          x: marginX + 17,
+        page.drawText(pt.wrapped[l], {
+          x: textX,
           y: pY,
           size: 8.5,
           font: fontRegular,
@@ -552,7 +590,7 @@ export class MpiPdfGeneratorService {
         });
         pY -= 11.5;
       }
-      pY -= 1.0;
+      pY -= 3.5;
     }
 
     // Footer

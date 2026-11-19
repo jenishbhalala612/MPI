@@ -472,8 +472,8 @@
                   @for (pt of (selectedRecord()?.points || '').split('\n'); track $index) {
                     @if (pt.trim()) {
                       <div class="submitted-pt-row">
-                        <span class="bullet">▶</span>
-                        <span>{{ pt.trim() }}</span>
+                        <span class="bullet">{{ $index + 1 }}.</span>
+                        <span>{{ cleanPointText(pt) }}</span>
                       </div>
                     }
                   }

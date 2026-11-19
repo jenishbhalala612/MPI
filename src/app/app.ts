@@ -631,6 +631,10 @@ export class App implements OnDestroy {
     this.toasts.update(list => list.filter(t => t.id !== id));
   }
 
+  cleanPointText(text: string): string {
+    return (text || '').replace(/^(\d+[\.\)\-:]|\*|\-|•|▪|–)\s+/, '').trim();
+  }
+
   private getInitialDate(): string {
     const now = new Date();
     const year = now.getFullYear();

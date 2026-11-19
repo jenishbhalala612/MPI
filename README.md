@@ -1,59 +1,56 @@
-# MPIFrontend
+# MPI Sheet Email Sender — Angular Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.6.
+Modern dark-themed Angular frontend for the **MPI Sheet System**, allowing users to specify From/To email addresses, draft multiline inspection points, preview the generated QuestPDF document in real time, and dispatch the PDF attachment via email.
 
-## Development server
+---
 
-To start a local development server, run:
+## ✨ Features
 
-```bash
-ng serve
+- **Dark Theme Matching UI Mockup**: Styled with sleek charcoal cards, pill inputs, custom scrollbars, and vibrant status badges.
+- **Real-Time PDF Preview**: Connected to `POST /api/mpi/preview`, returning raw PDF bytes rendered in an interactive embedded viewer (`iframe` + `DomSanitizer`).
+- **Email Dispatching**: Connected to `POST /api/mpi/send`, delivering the PDF attachment with clear success/error notifications.
+- **Smooth Loaders & Interactive Feedback**:
+  - Button spinner states (`Generating Preview...`, `Sending Email...`)
+  - Animated pulsing skeleton in the preview container during generation
+  - Floating toast notification system for success, warning, and error messages
+- **Preload & Quick Helpers**:
+  - **Fill Sample**: 1-click test data loader
+  - **Clear**: Form reset button
+  - **Point Counter**: Dynamic badge displaying detected points
+  - **Download & Popout**: Instant download of `MPI_Sheet.pdf` and popout into a separate browser tab
+- **Configurable Backend Target**: Default is `http://localhost:5135/api/mpi` with built-in health ping and quick endpoint customization.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Ensure Backend is Running
+In a separate terminal or Visual Studio:
+```powershell
+cd BACKEND\MPI_Sheet
+dotnet run
+```
+*(Backend runs on `http://localhost:5135` or `https://localhost:7063` with Swagger at `/swagger`)*
+
+### 2. Start Angular Development Server
+```powershell
+cd FRONTEND\MPI_Frontend
+npm start
+```
+Navigate your browser to:
+👉 **`http://localhost:4200`**
+
+---
+
+## 🧪 Testing & Building
+
+### Run Unit Tests
+```powershell
+npm test
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+### Build for Production
+```powershell
+npm run build
 ```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Production artifacts will be placed in `dist/MPI_Frontend`.

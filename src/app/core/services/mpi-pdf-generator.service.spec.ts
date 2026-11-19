@@ -50,7 +50,24 @@ describe('MpiPdfGeneratorService', () => {
 
     const bytes = await service.generatePdfBytes(req);
     const doc = await PDFDocument.load(bytes);
-    expect(doc.getPageCount()).toBeGreaterThan(1);
+    expect(doc.getPageCount()).toBe(2);
+  });
+
+  it('should strictly limit the document to a maximum of 2 pages even with 150 points', async () => {
+    const pointsList: string[] = [];
+    for (let i = 1; i <= 150; i++) {
+      pointsList.push(`Overflow point ${i}: High volume task execution item testing strict 2 page limit enforcement.`);
+    }
+
+    const req: MPISheetRequest = {
+      employeeName: 'Dana Tester',
+      date: '2026-11-01',
+      points: pointsList.join('\n')
+    };
+
+    const bytes = await service.generatePdfBytes(req);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(2);
   });
 
   it('should generate Blob correctly', async () => {

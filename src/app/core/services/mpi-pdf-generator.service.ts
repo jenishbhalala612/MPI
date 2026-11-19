@@ -52,9 +52,10 @@ export class MpiPdfGeneratorService {
 
     // Usable vertical heights inside boxes:
     // Page 1 points box: height 548pt, usable = 548 - 14 - 12 = 522pt
-    // Page 2+ points box: usable = (curY - 14) - (boxY + 12) = 782.89 - 44 = 738.89pt
+    // Page 2 points box: usable = (curY - 14) - (boxY + 12) = 782.89 - 44 = 738.89pt
     const page1AvailableHeight = 522;
     const overflowPageAvailableHeight = 735;
+    const MAX_PAGES = 2; // Strict limit: Maximum 2 pages allowed
 
     const pagesPoints: PreparedPdfPoint[][] = [];
     let currentPagePoints: PreparedPdfPoint[] = [];
@@ -67,7 +68,11 @@ export class MpiPdfGeneratorService {
         currentPagePoints.push(pt);
         currentUsedHeight += pt.height;
       } else {
-        // Page 1 is filled completely before going to next page
+        // Enforce strict limit to only 2 pages (do not create Page 3)
+        if (pagesPoints.length + 1 >= MAX_PAGES) {
+          break;
+        }
+        // Page 1 is filled completely before going to Page 2
         pagesPoints.push(currentPagePoints);
         currentPagePoints = [pt];
         currentLimit = overflowPageAvailableHeight;
@@ -79,7 +84,8 @@ export class MpiPdfGeneratorService {
       pagesPoints.push(currentPagePoints);
     }
 
-    const totalPages = pagesPoints.length;
+    // Document will have either 1 page or at most 2 pages
+    const totalPages = Math.min(pagesPoints.length, MAX_PAGES);
 
     // --- PAGE 1 ---
     const page1 = doc.addPage([595.28, 841.89]);
@@ -96,16 +102,16 @@ export class MpiPdfGeneratorService {
       fontItalic
     );
 
-    // --- PAGE 2+ (Overflow pages if points exceed page 1 limit) ---
-    for (let p = 1; p < pagesPoints.length; p++) {
-      const overflowPage = doc.addPage([595.28, 841.89]);
+    // --- PAGE 2 (Overflow page if points exceed Page 1, strictly capped to Page 2) ---
+    if (totalPages === 2 && pagesPoints.length > 1) {
+      const page2 = doc.addPage([595.28, 841.89]);
       this.renderOverflowPage(
         doc,
-        overflowPage,
-        p + 1,
+        page2,
+        2,
         totalPages,
         request,
-        pagesPoints[p],
+        pagesPoints[1],
         formattedDate,
         fontRegular,
         fontBold,

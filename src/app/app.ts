@@ -296,6 +296,7 @@ export class App implements OnDestroy {
     this.recordsService.saveRecord(record).subscribe({
       next: () => {
         this.isSubmitting.set(false);
+        this.resetFormFields();
         this.addToast(
           'success',
           'Sheet Submitted to Records!',
@@ -540,7 +541,7 @@ export class App implements OnDestroy {
     });
   }
 
-  clearForm(): void {
+  resetFormFields(): void {
     this.employeeName.set('');
     this.monthYear.set(this.getDefaultMonthYear());
     this.extraCurricularActivity.set('');
@@ -553,6 +554,10 @@ export class App implements OnDestroy {
     this.subject.set(this.getComputedSubject());
     this.isPreviewModalOpen.set(false);
     this.cleanUpPdfUrl();
+  }
+
+  clearForm(): void {
+    this.resetFormFields();
     this.addToast('info', 'Form Cleared', 'All input fields cleared.');
   }
 

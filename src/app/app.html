@@ -159,15 +159,40 @@
           <!-- Right Column: Extraordinary -->
           <div class="right-form-col">
             <div class="form-group extraordinary-form-group">
-              <label class="form-label" for="extraCurricularActivity">Extraordinary:</label>
+              <div class="label-row">
+                <label class="form-label" for="extraCurricularActivity">
+                  Extraordinary:
+                  <span class="required-dot" title="Required field"></span>
+                </label>
+                @if (extraCurricularActivity().trim().length > 0) {
+                  <span
+                    class="points-badge"
+                    [class.full]="isExtraLimitExceeded()"
+                    [class.page1]="!isExtraLimitExceeded()"
+                  >
+                    {{ extraCurricularActivity().trim().length }} / {{ maxExtraChars }} chars
+                    @if (isExtraLimitExceeded()) {
+                      <span> • ⚠️ Limit Reached</span>
+                    }
+                  </span>
+                }
+              </div>
               <textarea
                 id="extraCurricularActivity"
                 class="custom-textarea review-textarea"
+                [class.input-error-border]="isExtraLimitExceeded()"
                 rows="10"
                 [ngModel]="extraCurricularActivity()"
                 (ngModelChange)="extraCurricularActivity.set($event)"
                 placeholder="e.g. Actively participated in internal technical workshops, safety drills, and ISO quality compliance training..."
               ></textarea>
+              <div class="points-capacity-hint" [class.hint-error]="isExtraLimitExceeded()">
+                @if (isExtraLimitExceeded()) {
+                  <span style="color: #f59e0b; font-weight: 600;">⚠️ Limit Reached: Box fits max 3 lines (~350 characters). Please shorten.</span>
+                } @else {
+                  <span>📄 Fits in PDF box: Max 3 lines (~350 characters).</span>
+                }
+              </div>
             </div>
           </div>
         </div>

@@ -176,6 +176,16 @@ export class App implements OnDestroy {
     return raw.split(/\r?\n/).map(p => p.trim()).filter(p => p.length > 0);
   });
 
+  readonly maxExtraChars = 350;
+
+  readonly isExtraLimitExceeded = computed(() => {
+    const text = this.extraCurricularActivity().trim();
+    if (!text) return false;
+    if (text.length > this.maxExtraChars) return true;
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+    return lines.length > 3;
+  });
+
   readonly currentMonthYearDisplay = computed(() => {
     return this.monthYear().trim() || this.getDefaultMonthYear();
   });
@@ -280,7 +290,8 @@ export class App implements OnDestroy {
   readonly isFormValid = computed(() => {
     return this.isValidEmail(this.fromEmail()) &&
            this.isValidEmail(this.toEmail()) &&
-           this.points().trim().length > 0;
+           this.points().trim().length > 0 &&
+           this.extraCurricularActivity().trim().length > 0;
   });
 
   ngOnDestroy(): void {
@@ -320,6 +331,7 @@ export class App implements OnDestroy {
   onSubmitSheetForReview(): void {
     const empName = this.employeeName().trim();
     const pts = this.points().trim();
+    const extra = this.extraCurricularActivity().trim();
 
     if (!empName) {
       this.addToast('error', 'Validation Error', 'Please enter your Employee Name before submitting.');
@@ -327,6 +339,18 @@ export class App implements OnDestroy {
     }
     if (!pts) {
       this.addToast('error', 'Validation Error', 'MPI Sheet Points cannot be empty.');
+      return;
+    }
+    if (this.pointsPageInfo().isFull) {
+      this.addToast('error', 'Limit Reached', 'Points exceed the 2-page limit. Please reduce points to fit within 2 pages.');
+      return;
+    }
+    if (!extra) {
+      this.addToast('error', 'Validation Error', 'Extraordinary contributions cannot be empty.');
+      return;
+    }
+    if (this.isExtraLimitExceeded()) {
+      this.addToast('error', 'Limit Reached', 'Extraordinary points exceed the limit (max 3 lines / 350 characters). Please shorten it.');
       return;
     }
 
@@ -648,6 +672,14 @@ export class App implements OnDestroy {
   private validatePreview(): boolean {
     if (!this.points().trim()) {
       this.addToast('error', 'Validation Error', 'MPI Sheet Points cannot be empty.');
+      return false;
+    }
+    if (this.pointsPageInfo().isFull) {
+      this.addToast('error', 'Limit Reached', 'Points exceed the 2-page limit. Please reduce points to fit within 2 pages.');
+      return false;
+    }
+    if (this.isExtraLimitExceeded()) {
+      this.addToast('error', 'Limit Reached', 'Extraordinary points exceed the limit (max 3 lines / 350 characters). Please shorten it.');
       return false;
     }
     return true;

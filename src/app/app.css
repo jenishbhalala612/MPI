@@ -208,6 +208,14 @@
   gap: 5px;
 }
 
+.input-error-border {
+  border-color: #f59e0b !important;
+}
+
+.hint-error {
+  color: #f59e0b !important;
+}
+
 .input-wrapper {
   position: relative;
   width: 100%;

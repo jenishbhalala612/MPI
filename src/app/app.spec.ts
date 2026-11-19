@@ -137,4 +137,33 @@ describe('App', () => {
     expect(compiled.querySelector('#fromEmail')).toBeNull();
     expect(compiled.querySelector('#toEmail')).toBeNull();
   });
+
+  it('should validate extraordinary points before submitting sheet', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    app.employeeName.set('Test User');
+    app.points.set('1. Task A');
+    app.extraCurricularActivity.set('');
+
+    app.onSubmitSheetForReview();
+
+    expect(app.isSubmitting()).toBe(false);
+    const toast = app.toasts().find(t => t.message.includes('Extraordinary'));
+    expect(toast).toBeDefined();
+  });
+
+  it('should block submission if extraordinary points exceed limit', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    app.employeeName.set('Test User');
+    app.points.set('1. Task A');
+    app.extraCurricularActivity.set('A'.repeat(400));
+
+    expect(app.isExtraLimitExceeded()).toBe(true);
+    app.onSubmitSheetForReview();
+
+    expect(app.isSubmitting()).toBe(false);
+    const toast = app.toasts().find(t => t.title === 'Limit Reached');
+    expect(toast).toBeDefined();
+  });
 });

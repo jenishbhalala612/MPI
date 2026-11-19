@@ -82,11 +82,6 @@ export class App implements OnDestroy {
   constructor() {
     this.subject.set(this.getComputedSubject());
 
-    // Check stored session unlock
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      this.isReviewUnlocked.set(window.sessionStorage.getItem('mpi_review_unlocked') === 'true');
-    }
-
     // Check initial URL route (/review or #/review)
     if (typeof window !== 'undefined') {
       const checkRoute = () => {
@@ -96,6 +91,9 @@ export class App implements OnDestroy {
           this.activeTab.set('review');
         } else {
           this.activeTab.set('generator');
+          this.isReviewUnlocked.set(false);
+          this.totpCode.set('');
+          this.totpErrorMessage.set(null);
         }
       };
 
@@ -178,13 +176,18 @@ export class App implements OnDestroy {
   // --- Navigation Switcher ---
   setTab(tab: 'generator' | 'review'): void {
     this.activeTab.set(tab);
+    if (tab === 'generator') {
+      this.isReviewUnlocked.set(false);
+      this.totpCode.set('');
+      this.totpErrorMessage.set(null);
+    }
     if (typeof window !== 'undefined' && window.history) {
       const targetUrl = tab === 'review' ? '/review' : '/';
       if (window.location.pathname !== targetUrl) {
         window.history.pushState(null, '', targetUrl);
       }
     }
-    if (tab === 'review') {
+    if (tab === 'review' && this.isReviewUnlocked()) {
       this.recordsService.refreshRecords().subscribe();
     }
   }

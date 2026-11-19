@@ -176,14 +176,16 @@ export class App implements OnDestroy {
     return raw.split(/\r?\n/).map(p => p.trim()).filter(p => p.length > 0);
   });
 
-  readonly maxExtraChars = 350;
+  readonly maxExtraWords = 100;
+
+  readonly extraWordsCount = computed(() => {
+    const text = this.extraCurricularActivity().trim();
+    if (!text) return 0;
+    return text.split(/\s+/).filter(w => w.length > 0).length;
+  });
 
   readonly isExtraLimitExceeded = computed(() => {
-    const text = this.extraCurricularActivity().trim();
-    if (!text) return false;
-    if (text.length > this.maxExtraChars) return true;
-    const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
-    return lines.length > 3;
+    return this.extraWordsCount() > this.maxExtraWords;
   });
 
   readonly currentMonthYearDisplay = computed(() => {
@@ -350,7 +352,7 @@ export class App implements OnDestroy {
       return;
     }
     if (this.isExtraLimitExceeded()) {
-      this.addToast('error', 'Limit Reached', 'Extraordinary points exceed the limit (max 3 lines / 350 characters). Please shorten it.');
+      this.addToast('error', 'Limit Reached', 'Extraordinary points exceed the limit (max 100 words). Please shorten it.');
       return;
     }
 
@@ -679,7 +681,7 @@ export class App implements OnDestroy {
       return false;
     }
     if (this.isExtraLimitExceeded()) {
-      this.addToast('error', 'Limit Reached', 'Extraordinary points exceed the limit (max 3 lines / 350 characters). Please shorten it.');
+      this.addToast('error', 'Limit Reached', 'Extraordinary points exceed the limit (max 100 words). Please shorten it.');
       return false;
     }
     return true;

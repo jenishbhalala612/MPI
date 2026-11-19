@@ -152,12 +152,34 @@ describe('App', () => {
     expect(toast).toBeDefined();
   });
 
+  it('should calculate extraordinary word count and enforce 100-word limit', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+
+    // Empty text
+    app.extraCurricularActivity.set('');
+    expect(app.extraWordsCount()).toBe(0);
+    expect(app.isExtraLimitExceeded()).toBe(false);
+
+    // Exactly 100 words
+    const words100 = Array.from({ length: 100 }, (_, i) => `word${i + 1}`).join(' ');
+    app.extraCurricularActivity.set(words100);
+    expect(app.extraWordsCount()).toBe(100);
+    expect(app.isExtraLimitExceeded()).toBe(false);
+
+    // 101 words exceeds limit
+    const words101 = words100 + ' extra';
+    app.extraCurricularActivity.set(words101);
+    expect(app.extraWordsCount()).toBe(101);
+    expect(app.isExtraLimitExceeded()).toBe(true);
+  });
+
   it('should block submission if extraordinary points exceed limit', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
     app.employeeName.set('Test User');
     app.points.set('1. Task A');
-    app.extraCurricularActivity.set('A'.repeat(400));
+    app.extraCurricularActivity.set('word '.repeat(105));
 
     expect(app.isExtraLimitExceeded()).toBe(true);
     app.onSubmitSheetForReview();

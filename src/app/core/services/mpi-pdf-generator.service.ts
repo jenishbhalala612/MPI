@@ -265,17 +265,38 @@ export class MpiPdfGeneratorService {
 
     const extraText = request.extraCurricularActivity?.trim();
     if (extraText) {
-      const wrapped = this.splitIntoLines(extraText, fontRegular, 8.5, contentWidth - 14);
-      let textY = curY - 13;
-      for (const line of wrapped.slice(0, 3)) {
+      // Dynamically adjust font size and line height to fit up to 100 words in the box
+      let fontSize = 8.5;
+      let lineHeight = 11.5;
+      let wrapped = this.splitIntoLines(extraText, fontRegular, fontSize, contentWidth - 14);
+
+      if (wrapped.length > 3) {
+        fontSize = 7.5;
+        lineHeight = 9.5;
+        wrapped = this.splitIntoLines(extraText, fontRegular, fontSize, contentWidth - 14);
+      }
+      if (wrapped.length > 4) {
+        fontSize = 6.8;
+        lineHeight = 8.2;
+        wrapped = this.splitIntoLines(extraText, fontRegular, fontSize, contentWidth - 14);
+      }
+      if (wrapped.length > 5) {
+        fontSize = 6.2;
+        lineHeight = 7.2;
+        wrapped = this.splitIntoLines(extraText, fontRegular, fontSize, contentWidth - 14);
+      }
+
+      let textY = curY - (fontSize + 3.5);
+      for (const line of wrapped) {
+        if (textY < curY - cardHeight + 3) break;
         page.drawText(line, {
           x: marginX + 7,
           y: textY,
-          size: 8.5,
+          size: fontSize,
           font: fontRegular,
           color: textDark
         });
-        textY -= 11.5;
+        textY -= lineHeight;
       }
     } else {
       page.drawText('Extraordinary Contributions / Notes', {

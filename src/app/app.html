@@ -170,7 +170,7 @@
                     [class.full]="isExtraLimitExceeded()"
                     [class.page1]="!isExtraLimitExceeded()"
                   >
-                    {{ extraCurricularActivity().trim().length }} / {{ maxExtraChars }} chars
+                    {{ extraWordsCount() }} / {{ maxExtraWords }} words
                     @if (isExtraLimitExceeded()) {
                       <span> • ⚠️ Limit Reached</span>
                     }
@@ -188,9 +188,9 @@
               ></textarea>
               <div class="points-capacity-hint" [class.hint-error]="isExtraLimitExceeded()">
                 @if (isExtraLimitExceeded()) {
-                  <span style="color: #f59e0b; font-weight: 600;">⚠️ Limit Reached: Box fits max 3 lines (~350 characters). Please shorten.</span>
+                  <span style="color: #f59e0b; font-weight: 600;">⚠️ Limit Reached: Box fits max 100 words. Please shorten.</span>
                 } @else {
-                  <span>📄 Fits in PDF box: Max 3 lines (~350 characters).</span>
+                  <span>📄 Fits in PDF box: Max 100 words.</span>
                 }
               </div>
             </div>

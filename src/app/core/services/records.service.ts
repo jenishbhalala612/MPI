@@ -48,6 +48,44 @@ export class RecordsService {
   }
 
   /**
+   * Verifies 6-digit TOTP code against Netlify serverless function
+   */
+  verifyTotp(code: string): Observable<{ success: boolean; message?: string; error?: string }> {
+    const clean = code.trim().replace(/\D/g, '');
+    if (clean.length !== 6) {
+      return of({ success: false, error: 'Please enter a valid 6-digit code.' });
+    }
+
+    if (typeof window === 'undefined' || !window.location || !window.location.origin || window.location.origin === 'null') {
+      return of({ success: true, message: 'Offline/Test Mode' });
+    }
+
+    const fnUrl = `${window.location.origin}/.netlify/functions/records`;
+    const apiUrl = `${window.location.origin}/api/records`;
+
+    return this.http.post<{ success: boolean; verified?: boolean; message?: string; error?: string }>(
+      fnUrl,
+      { action: 'verify_totp', code: clean }
+    ).pipe(
+      map(res => ({ success: !!res.success, message: res.message, error: res.error })),
+      catchError(err => {
+        return this.http.post<{ success: boolean; verified?: boolean; message?: string; error?: string }>(
+          apiUrl,
+          { action: 'verify_totp', code: clean }
+        ).pipe(
+          map(res => ({ success: !!res.success, message: res.message, error: res.error })),
+          catchError(err2 => {
+            const errorMsg = (err2.error && err2.error.error) 
+              ? err2.error.error 
+              : (err.error && err.error.error ? err.error.error : 'Invalid 6-digit code. Please verify against your Authenticator app.');
+            return of({ success: false, error: errorMsg });
+          })
+        );
+      })
+    );
+  }
+
+  /**
    * Refreshes records from Netlify Functions direct endpoint or /api/records or fallback static /records.json
    */
   refreshRecords(): Observable<RecordsDatabase> {

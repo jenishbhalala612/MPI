@@ -57,12 +57,23 @@
             <span>Reset Form</span>
           </button>
         } @else {
-          <button type="button" class="pill-btn-sm" (click)="refreshRecords()" title="Refresh records from records.json">
-            <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span>Refresh JSON</span>
-          </button>
+          <div class="topbar-review-actions">
+            @if (isReviewUnlocked()) {
+              <button type="button" class="pill-btn-sm" (click)="refreshRecords()" title="Refresh records from records.json">
+                <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Refresh JSON</span>
+              </button>
+
+              <button type="button" class="pill-btn-sm lock-workspace-btn" (click)="lockReviewWorkspace()" title="Lock review workspace">
+                <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span>Lock</span>
+              </button>
+            }
+          </div>
         }
       </div>
     </div>
@@ -214,7 +225,100 @@
 
     <!-- VIEW 2: Team Lead Review Workspace (/review) -->
     @if (activeTab() === 'review') {
-      <div class="mpi-card review-workspace-card">
+      @if (!isReviewUnlocked()) {
+        <!-- TOTP Gatekeeper Security Screen -->
+        <div class="totp-gatekeeper-wrapper animate-fade-in">
+          <div class="totp-gatekeeper-card">
+            <!-- Glowing Security Shield Icon -->
+            <div class="totp-icon-glow">
+              <svg class="totp-shield-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+
+            <h1 class="totp-title">Team Lead Verification</h1>
+            <p class="totp-subtitle">This workspace is restricted. Enter the 6-digit one-time code from your <strong>Google Authenticator</strong> or <strong>Microsoft Authenticator</strong> app.</p>
+
+            <form class="totp-form" (submit)="$event.preventDefault(); onVerifyTotp()">
+              <div class="totp-input-container">
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  maxlength="6"
+                  class="totp-input"
+                  placeholder="000000"
+                  [ngModel]="totpCode()"
+                  (ngModelChange)="totpCode.set($event)"
+                  name="totpCode"
+                  autocomplete="one-time-code"
+                  autofocus
+                />
+              </div>
+
+              @if (totpErrorMessage()) {
+                <div class="totp-error-banner animate-fade-in">
+                  <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{{ totpErrorMessage() }}</span>
+                </div>
+              }
+
+              <button
+                type="submit"
+                class="pill-btn totp-verify-btn"
+                [disabled]="isVerifyingTotp() || totpCode().trim().length < 6"
+              >
+                @if (isVerifyingTotp()) {
+                  <span class="spinner"></span>
+                  <span>Verifying Code...</span>
+                } @else {
+                  <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                  </svg>
+                  <span>Verify & Unlock Workspace</span>
+                }
+              </button>
+            </form>
+
+            <!-- First-time Setup Toggle -->
+            <div class="totp-setup-toggle">
+              <button
+                type="button"
+                class="totp-setup-link"
+                (click)="toggleTotpSetupGuide()"
+              >
+                <span>🔑 {{ showTotpSetupGuide() ? 'Hide Setup Details' : 'First time? View Authenticator Setup Key' }}</span>
+              </button>
+            </div>
+
+            @if (showTotpSetupGuide()) {
+              <div class="totp-setup-box animate-fade-in">
+                <h3 class="setup-box-title">Authenticator App Setup</h3>
+                <p class="setup-box-desc">Add this key to Google Authenticator or Microsoft Authenticator on your mobile device:</p>
+
+                <div class="secret-key-badge-row">
+                  <code class="secret-key-display">{{ totpSecretKey }}</code>
+                  <button type="button" class="copy-secret-btn" (click)="copyTotpSecret()" title="Copy setup key">
+                    Copy Key
+                  </button>
+                </div>
+
+                <ol class="setup-steps-list">
+                  <li>Open <strong>Google Authenticator</strong> (or Microsoft Authenticator).</li>
+                  <li>Tap <strong>+</strong> and select <strong>Enter a setup key</strong>.</li>
+                  <li>Account name: <code>MPI Sheet - Team Lead</code></li>
+                  <li>Your key: <code>{{ totpSecretKey }}</code></li>
+                  <li>Type of key: <strong>Time-based</strong> (default).</li>
+                  <li>Enter the 6-digit code shown in the app above to unlock.</li>
+                </ol>
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <div class="mpi-card review-workspace-card">
         <div class="card-header">
           <div>
             <h1 class="card-title">Team Lead Review Workspace</h1>
@@ -483,6 +587,7 @@
             </div>
           </div>
         </div>
+      }
       }
     }
   </main>

@@ -1,4 +1,41 @@
 // Netlify Serverless Function for MPI Sheet Records (data/records.json)
+const crypto = require('crypto');
+
+// RFC 6238 TOTP Engine for Team Lead Verification
+function base32tohex(base32) {
+  const base32chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  let hex = '';
+  for (let i = 0; i < base32.length; i++) {
+    const val = base32chars.indexOf(base32.charAt(i).toUpperCase());
+    if (val >= 0) bits += val.toString(2).padStart(5, '0');
+  }
+  for (let i = 0; i + 4 <= bits.length; i += 4) {
+    hex += parseInt(bits.substr(i, 4), 2).toString(16);
+  }
+  return hex;
+}
+
+function generateTOTP(secretBase32, offset = 0) {
+  const counter = Math.floor(Date.now() / 1000 / 30) + offset;
+  const counterBuf = Buffer.alloc(8);
+  counterBuf.writeBigInt64BE(BigInt(counter));
+  const key = Buffer.from(base32tohex(secretBase32), 'hex');
+  const hmac = crypto.createHmac('sha1', key).update(counterBuf).digest();
+  const off = hmac[hmac.length - 1] & 0xf;
+  const code = ((hmac[off] & 0x7f) << 24) | ((hmac[off + 1] & 0xff) << 16) | ((hmac[off + 2] & 0xff) << 8) | (hmac[off + 3] & 0xff);
+  return (code % 1000000).toString().padStart(6, '0');
+}
+
+function verifyTOTP(token, secretBase32) {
+  const clean = (token || '').replace(/\D/g, '');
+  if (clean.length !== 6) return false;
+  for (let offset of [-1, 0, 1]) {
+    if (generateTOTP(secretBase32, offset) === clean) return true;
+  }
+  return false;
+}
+
 let inMemoryRecords = {
   "Alex Johnson": {
     "OCTOBER 2026": {
@@ -62,7 +99,6 @@ exports.handler = async function (event, context) {
       try {
         const data = await store.get('records', { type: 'json' });
         if (data && typeof data === 'object') {
-          // Merge initial seed with blob data
           return { ...inMemoryRecords, ...data };
         }
       } catch (e) {
@@ -95,6 +131,37 @@ exports.handler = async function (event, context) {
   if (event.httpMethod === 'POST') {
     try {
       const payload = JSON.parse(event.body || '{}');
+
+      // 1. Handle TOTP Verification for Team Lead
+      if (payload.action === 'verify_totp') {
+        const code = (payload.code || '').replace(/\D/g, '');
+        const secret = process.env.TOTP_SECRET || 'MPSR2236TLREVKEY';
+        const isValid = verifyTOTP(code, secret);
+
+        if (isValid) {
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+              success: true,
+              verified: true,
+              message: 'TOTP Verification successful.'
+            })
+          };
+        } else {
+          return {
+            statusCode: 401,
+            headers,
+            body: JSON.stringify({
+              success: false,
+              verified: false,
+              error: 'Invalid 6-digit code. Please verify against your Google Authenticator or Microsoft Authenticator app.'
+            })
+          };
+        }
+      }
+
+      // 2. Handle Sheet Record Submission / Review Save
       const employeeName = (payload.employeeName || '').trim();
       const monthYear = (payload.monthYear || '').trim().toUpperCase();
 
@@ -123,7 +190,7 @@ exports.handler = async function (event, context) {
         teamLeadRating: payload.teamLeadRating !== undefined ? payload.teamLeadRating : (existing.teamLeadRating ?? null),
         hrReview: payload.hrReview !== undefined ? payload.hrReview : (existing.hrReview || ''),
         hrRating: payload.hrRating !== undefined ? payload.hrRating : (existing.hrRating ?? null),
-        status: payload.status || existing.status || 'Pending',
+        status: payload.status || 'Reviewed',
         updatedAt: payload.updatedAt || new Date().toISOString()
       };
 

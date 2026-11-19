@@ -71,8 +71,21 @@ export class App implements OnDestroy {
   readonly reviewEditingHrRating = signal<number | null>(null);
   readonly reviewEditingStatus = signal<'Pending' | 'Reviewed'>('Reviewed');
 
+  // --- TOTP Verification Signals ---
+  readonly isReviewUnlocked = signal<boolean>(false);
+  readonly totpCode = signal<string>('');
+  readonly isVerifyingTotp = signal<boolean>(false);
+  readonly totpErrorMessage = signal<string | null>(null);
+  readonly showTotpSetupGuide = signal<boolean>(false);
+  readonly totpSecretKey = 'MPSR2236TLREVKEY';
+
   constructor() {
     this.subject.set(this.getComputedSubject());
+
+    // Check stored session unlock
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      this.isReviewUnlocked.set(window.sessionStorage.getItem('mpi_review_unlocked') === 'true');
+    }
 
     // Check initial URL route (/review or #/review)
     if (typeof window !== 'undefined') {
@@ -345,6 +358,66 @@ export class App implements OnDestroy {
         this.addToast('error', 'Save Failed', err.message);
       }
     });
+  }
+
+  // --- TOTP Authentication Actions ---
+  onVerifyTotp(): void {
+    const code = this.totpCode().trim().replace(/\D/g, '');
+    if (code.length !== 6) {
+      this.totpErrorMessage.set('Please enter the full 6-digit code from your authenticator app.');
+      return;
+    }
+
+    this.isVerifyingTotp.set(true);
+    this.totpErrorMessage.set(null);
+
+    this.recordsService.verifyTotp(code).subscribe({
+      next: (res) => {
+        this.isVerifyingTotp.set(false);
+        if (res.success) {
+          this.isReviewUnlocked.set(true);
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            window.sessionStorage.setItem('mpi_review_unlocked', 'true');
+          }
+          this.totpCode.set('');
+          this.addToast('success', 'Access Granted', 'Team Lead Workspace Unlocked.');
+          this.recordsService.refreshRecords().subscribe();
+        } else {
+          this.totpErrorMessage.set(res.error || 'Invalid 6-digit code. Please verify against your Authenticator app.');
+          this.addToast('error', 'Authentication Failed', this.totpErrorMessage()!);
+        }
+      },
+      error: (err: Error) => {
+        this.isVerifyingTotp.set(false);
+        this.totpErrorMessage.set(err.message || 'Verification failed. Please try again.');
+      }
+    });
+  }
+
+  lockReviewWorkspace(): void {
+    this.isReviewUnlocked.set(false);
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.removeItem('mpi_review_unlocked');
+    }
+    this.totpCode.set('');
+    this.totpErrorMessage.set(null);
+    this.addToast('info', 'Workspace Locked', 'Team Lead Review Workspace has been secured.');
+  }
+
+  toggleTotpSetupGuide(): void {
+    this.showTotpSetupGuide.update(v => !v);
+  }
+
+  copyTotpSecret(): void {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(this.totpSecretKey).then(() => {
+        this.addToast('success', 'Copied!', 'Secret key copied to clipboard.');
+      }).catch(() => {
+        this.addToast('info', 'Secret Key', this.totpSecretKey);
+      });
+    } else {
+      this.addToast('info', 'Secret Key', this.totpSecretKey);
+    }
   }
 
   previewRecordPdf(record: SheetRecord): void {

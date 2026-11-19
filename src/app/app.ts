@@ -74,19 +74,21 @@ export class App implements OnDestroy {
   constructor() {
     this.subject.set(this.getComputedSubject());
 
-    // Check initial URL route
+    // Check initial URL route (/review or #/review)
     if (typeof window !== 'undefined') {
-      if (window.location.pathname.startsWith('/review')) {
-        this.activeTab.set('review');
-      }
-
-      window.addEventListener('popstate', () => {
-        if (window.location.pathname.startsWith('/review')) {
+      const checkRoute = () => {
+        const p = (window.location.pathname || '').toLowerCase();
+        const h = (window.location.hash || '').toLowerCase();
+        if (p.startsWith('/review') || h.includes('review')) {
           this.activeTab.set('review');
         } else {
           this.activeTab.set('generator');
         }
-      });
+      };
+
+      checkRoute();
+      window.addEventListener('popstate', checkRoute);
+      window.addEventListener('hashchange', checkRoute);
     }
 
     // Lock body scrolling when modal is open to ensure pure mobile viewport coverage

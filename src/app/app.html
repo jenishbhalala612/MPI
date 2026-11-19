@@ -17,37 +17,35 @@
         </div>
       </div>
 
-      <!-- Navigation Switcher -->
-      <nav class="nav-switcher" aria-label="Main Navigation">
-        <button
-          type="button"
-          class="nav-tab-btn"
-          [class.active]="activeTab() === 'generator'"
-          (click)="setTab('generator')"
-          title="Go to Sheet Generator"
-        >
-          <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-          <span class="nav-tab-text">Sheet Generator</span>
-        </button>
+      <!-- Navigation Switcher: Only visible when manually navigating to /review -->
+      @if (activeTab() === 'review') {
+        <nav class="nav-switcher animate-fade-in" aria-label="Review Navigation">
+          <button
+            type="button"
+            class="nav-tab-btn"
+            (click)="setTab('generator')"
+            title="Return to Sheet Generator"
+          >
+            <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span class="nav-tab-text">Exit to Generator</span>
+          </button>
 
-        <button
-          type="button"
-          class="nav-tab-btn review-nav-tab"
-          [class.active]="activeTab() === 'review'"
-          (click)="setTab('review')"
-          title="Go to Team Lead Review Workspace"
-        >
-          <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-          <span class="nav-tab-text">Team Lead Review</span>
-          @if (pendingReviewCount() > 0) {
-            <span class="nav-badge-pill" title="Pending reviews">{{ pendingReviewCount() }}</span>
-          }
-        </button>
-      </nav>
+          <div
+            class="nav-tab-btn review-nav-tab active"
+            title="Team Lead Review Workspace"
+          >
+            <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            <span class="nav-tab-text">Team Lead Review</span>
+            @if (pendingReviewCount() > 0) {
+              <span class="nav-badge-pill" title="Pending reviews">{{ pendingReviewCount() }}</span>
+            }
+          </div>
+        </nav>
+      }
 
       <!-- Right Action -->
       <div class="topbar-right">

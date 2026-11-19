@@ -27,7 +27,9 @@ export class RecordsService {
         const cached = localStorage.getItem(STORAGE_KEY);
         if (cached) {
           const parsed = JSON.parse(cached);
-          this.records.set(parsed);
+          if (parsed && typeof parsed === 'object') {
+            this.records.set(parsed);
+          }
         }
       } catch (e) {
         console.warn('Failed to parse local records cache:', e);
@@ -46,7 +48,7 @@ export class RecordsService {
   }
 
   /**
-   * Refreshes records from Netlify API endpoint (/api/records) or fallback static /records.json
+   * Refreshes records from Netlify Functions direct endpoint or /api/records or fallback static /records.json
    */
   refreshRecords(): Observable<RecordsDatabase> {
     this.isLoading.set(true);
@@ -58,24 +60,55 @@ export class RecordsService {
       return of(this.records());
     }
 
+    const fnUrl = `${window.location.origin}/.netlify/functions/records`;
     const apiUrl = `${window.location.origin}/api/records`;
     const jsonUrl = `${window.location.origin}/records.json`;
 
-    // Try Netlify function / API first
-    return this.http.get<{ success?: boolean; data?: RecordsDatabase }>(apiUrl).pipe(
+    // Try Netlify direct function first, then /api/records, then static records.json
+    return this.http.get<{ success?: boolean; data?: RecordsDatabase }>(fnUrl).pipe(
       map(res => (res && res.data) ? res.data : (res as unknown as RecordsDatabase)),
       catchError(() => {
-        // Fallback to static deployed /records.json
-        return this.http.get<RecordsDatabase>(jsonUrl).pipe(
-          catchError(err => {
-            return of(this.records());
+        return this.http.get<{ success?: boolean; data?: RecordsDatabase }>(apiUrl).pipe(
+          map(res => (res && res.data) ? res.data : (res as unknown as RecordsDatabase)),
+          catchError(() => {
+            return this.http.get<RecordsDatabase>(jsonUrl).pipe(
+              catchError(() => of(this.records()))
+            );
           })
         );
       }),
       tap(loaded => {
-        const merged = { ...this.records(), ...loaded };
-        this.records.set(merged);
-        this.saveToLocalCache(merged);
+        if (!loaded || typeof loaded !== 'object') {
+          this.isLoading.set(false);
+          return;
+        }
+
+        // SMART MERGE: Local state takes precedence if it has a newer or equal updatedAt timestamp!
+        const currentDb = { ...this.records() };
+
+        for (const emp of Object.keys(loaded)) {
+          if (!currentDb[emp]) {
+            currentDb[emp] = {};
+          }
+          for (const mYear of Object.keys(loaded[emp] || {})) {
+            const incoming = loaded[emp][mYear];
+            const existing = currentDb[emp][mYear];
+
+            if (!existing) {
+              currentDb[emp][mYear] = incoming;
+            } else {
+              const timeIncoming = incoming.updatedAt ? new Date(incoming.updatedAt).getTime() : 0;
+              const timeExisting = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+              // Keep newer record
+              if (timeIncoming > timeExisting) {
+                currentDb[emp][mYear] = incoming;
+              }
+            }
+          }
+        }
+
+        this.records.set(currentDb);
+        this.saveToLocalCache(currentDb);
         this.isLoading.set(false);
       })
     );
@@ -105,16 +138,20 @@ export class RecordsService {
     this.records.set(current);
     this.saveToLocalCache(current);
 
-    // Post to Netlify Function API
     if (typeof window === 'undefined' || !window.location || !window.location.origin || window.location.origin === 'null') {
       return of(updatedRecord);
     }
 
+    const fnUrl = `${window.location.origin}/.netlify/functions/records`;
     const apiUrl = `${window.location.origin}/api/records`;
-    return this.http.post<{ success?: boolean; data?: SheetRecord }>(apiUrl, updatedRecord).pipe(
+
+    return this.http.post<{ success?: boolean; data?: SheetRecord }>(fnUrl, updatedRecord).pipe(
       map(res => (res && res.data) ? res.data : updatedRecord),
-      catchError(err => {
-        return of(updatedRecord);
+      catchError(() => {
+        return this.http.post<{ success?: boolean; data?: SheetRecord }>(apiUrl, updatedRecord).pipe(
+          map(res => (res && res.data) ? res.data : updatedRecord),
+          catchError(() => of(updatedRecord))
+        );
       })
     );
   }

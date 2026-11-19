@@ -1,5 +1,32 @@
 // Netlify Serverless Function for MPI Sheet Records (data/records.json)
-let inMemoryRecords = null;
+let inMemoryRecords = {
+  "Alex Johnson": {
+    "OCTOBER 2026": {
+      "employeeName": "Alex Johnson",
+      "monthYear": "OCTOBER 2026",
+      "points": "1. Completed OAuth2 Authentication integration for mobile app\n2. Resolved 14 High Priority Jira defects in Payment processing\n3. Optimized SQL index queries reducing API latency by 45%\n4. Mentored 2 Junior Engineers during sprint onboarding",
+      "extraCurricularActivity": "Organized team Tech-Talk on Angular Signals and Modern State Management",
+      "teamLeadReview": "Outstanding technical performance and initiative across all sprint objectives.",
+      "teamLeadRating": 9,
+      "hrReview": "Demonstrates strong company culture, collaboration, and reliability.",
+      "hrRating": 9,
+      "status": "Reviewed",
+      "updatedAt": "2026-10-31T17:30:00.000Z"
+    },
+    "NOVEMBER 2026": {
+      "employeeName": "Alex Johnson",
+      "monthYear": "NOVEMBER 2026",
+      "points": "1. Migrated Angular legacy forms to Typed Reactive signals\n2. Configured CI/CD automated pipeline for Netlify deployment\n3. Authored end-to-end integration test suites with Puppeteer",
+      "extraCurricularActivity": "Participated in quarterly Hackathon and created team utility toolkit",
+      "teamLeadReview": "",
+      "teamLeadRating": null,
+      "hrReview": "",
+      "hrRating": null,
+      "status": "Pending",
+      "updatedAt": "2026-11-19T09:00:00.000Z"
+    }
+  }
+};
 
 exports.handler = async function (event, context) {
   const headers = {
@@ -16,13 +43,17 @@ exports.handler = async function (event, context) {
   let store = null;
   try {
     const blobs = require('@netlify/blobs');
-    store = blobs.getStore ? blobs.getStore('mpi-sheets') : null;
+    if (blobs && blobs.getStore) {
+      store = blobs.getStore({ name: 'mpi-sheets', consistency: 'strong' });
+    }
   } catch (e) {
     try {
       const blobs = await import('@netlify/blobs');
-      store = blobs.getStore ? blobs.getStore('mpi-sheets') : null;
+      if (blobs && blobs.getStore) {
+        store = blobs.getStore({ name: 'mpi-sheets', consistency: 'strong' });
+      }
     } catch (e2) {
-      // Blobs package optional
+      // Blobs optional
     }
   }
 
@@ -30,12 +61,15 @@ exports.handler = async function (event, context) {
     if (store) {
       try {
         const data = await store.get('records', { type: 'json' });
-        if (data) return data;
+        if (data && typeof data === 'object') {
+          // Merge initial seed with blob data
+          return { ...inMemoryRecords, ...data };
+        }
       } catch (e) {
         console.warn('[Netlify Function] Blobs read error:', e.message);
       }
     }
-    return inMemoryRecords || {};
+    return inMemoryRecords;
   }
 
   async function saveRecords(records) {
@@ -82,13 +116,15 @@ exports.handler = async function (event, context) {
         employeeName,
         monthYear,
         points: payload.points !== undefined ? payload.points : (existing.points || ''),
-        extraordinary: payload.extraordinary !== undefined ? payload.extraordinary : (existing.extraordinary || ''),
+        extraCurricularActivity: payload.extraCurricularActivity !== undefined 
+          ? payload.extraCurricularActivity 
+          : (payload.extraordinary !== undefined ? payload.extraordinary : (existing.extraCurricularActivity || '')),
         teamLeadReview: payload.teamLeadReview !== undefined ? payload.teamLeadReview : (existing.teamLeadReview || ''),
         teamLeadRating: payload.teamLeadRating !== undefined ? payload.teamLeadRating : (existing.teamLeadRating ?? null),
         hrReview: payload.hrReview !== undefined ? payload.hrReview : (existing.hrReview || ''),
         hrRating: payload.hrRating !== undefined ? payload.hrRating : (existing.hrRating ?? null),
         status: payload.status || existing.status || 'Pending',
-        updatedAt: new Date().toISOString()
+        updatedAt: payload.updatedAt || new Date().toISOString()
       };
 
       records[employeeName][monthYear] = updatedRecord;

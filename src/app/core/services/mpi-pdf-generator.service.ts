@@ -29,13 +29,13 @@ export class MpiPdfGeneratorService {
       .map(p => p.trim())
       .filter(p => p.length > 0);
 
-    const pointMaxW = 595.28 - 20 * 2 - 36; // contentWidth - 36 = 519.28 pt
+    const pointMaxW = 595.28 - 20 * 2 - 28; // contentWidth - 28 = 527.28 pt
     const preparedPoints: PreparedPdfPoint[] = [];
 
     let ptIdx = 0;
     for (const raw of rawPoints) {
       // Strip any duplicate user-typed bullet or number prefix: "1. ", "1) ", "- ", "• ", "* ", "1: "
-      const clean = raw.replace(/^(\d+[\.\)\-:]|\*|\-|•|▪|–)\s+/, '').trim();
+      const clean = raw.replace(/^(\d+[\.\)\-:]|\*|\-|•|▪|–)\s*/, '').trim();
       if (!clean) continue;
       const wrapped = this.splitIntoLines(clean, fontRegular, 8.5, pointMaxW);
       // Height = wrapped lines * line height (11.5) + point bottom gap (3.5)
@@ -204,19 +204,17 @@ export class MpiPdfGeneratorService {
       });
     } else {
       let pY = curY - 14;
-      const numberX = marginX + 8;
-      const textX = marginX + 26;
+      const bulletX = marginX + 9;
+      const textX = marginX + 20;
 
       for (const pt of points) {
         if (pY < pointsBoxY + 12) break;
 
-        // Draw point number in bold blue (e.g. "1.", "2.", "15.")
-        const numStr = `${pt.index + 1}.`;
-        page.drawText(numStr, {
-          x: numberX,
-          y: pY,
-          size: 8.5,
-          font: fontBold,
+        // Draw crisp circular bullet point in blueDark
+        page.drawCircle({
+          x: bulletX,
+          y: pY + 3.0,
+          size: 2.2,
           color: blueDark
         });
 
@@ -562,19 +560,17 @@ export class MpiPdfGeneratorService {
     });
 
     let pY = curY - 14;
-    const numberX = marginX + 8;
-    const textX = marginX + 26;
+    const bulletX = marginX + 9;
+    const textX = marginX + 20;
 
     for (const pt of points) {
       if (pY < boxY + 12) break;
 
-      // Draw point number in bold blue (e.g. "29.", "30.", etc.)
-      const numStr = `${pt.index + 1}.`;
-      page.drawText(numStr, {
-        x: numberX,
-        y: pY,
-        size: 8.5,
-        font: fontBold,
+      // Draw crisp circular bullet point in blueDark
+      page.drawCircle({
+        x: bulletX,
+        y: pY + 3.0,
+        size: 2.2,
         color: blueDark
       });
 

@@ -1928,9 +1928,10 @@ body.modal-open {
 
 .submitted-pt-row .bullet {
   color: #3b82f6;
-  font-size: 12px;
-  font-weight: 700;
-  min-width: 20px;
+  font-size: 15px;
+  line-height: 1;
+  min-width: 12px;
+  margin-top: 1px;
   flex-shrink: 0;
 }
 

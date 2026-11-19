@@ -333,11 +333,11 @@ export class App implements OnDestroy {
     this.recordsService.saveRecord(updatedRecord).subscribe({
       next: (saved) => {
         this.isSavingReview.set(false);
-        this.selectedRecord.set(saved);
+        this.closeRecordReview();
         this.addToast(
           'success',
           'Review Saved to JSON!',
-          `Updated records.json for ${saved.employeeName} (${saved.monthYear}) with rating ${saved.teamLeadRating || '-'}/10.`
+          `Updated records.json for ${saved.employeeName} (${saved.monthYear}) with rating ${saved.teamLeadRating ?? '-'}/10.`
         );
       },
       error: (err: Error) => {

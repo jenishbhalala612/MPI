@@ -15,10 +15,15 @@ exports.handler = async function (event, context) {
 
   let store = null;
   try {
-    const { getStore } = require('@netlify/blobs');
-    store = getStore('mpi-sheets');
+    const blobs = require('@netlify/blobs');
+    store = blobs.getStore ? blobs.getStore('mpi-sheets') : null;
   } catch (e) {
-    // Netlify Blobs package optional
+    try {
+      const blobs = await import('@netlify/blobs');
+      store = blobs.getStore ? blobs.getStore('mpi-sheets') : null;
+    } catch (e2) {
+      // Blobs package optional
+    }
   }
 
   async function loadRecords() {

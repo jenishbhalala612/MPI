@@ -21,7 +21,8 @@
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.5.438",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "@netlify/blobs": "^8.1.0"
   },
   "devDependencies": {
     "@angular/build": "^22.2.6",

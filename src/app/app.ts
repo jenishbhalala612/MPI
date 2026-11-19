@@ -303,7 +303,7 @@ export class App implements OnDestroy {
     this.reviewEditingLeadRating.set(record.teamLeadRating ?? null);
     this.reviewEditingHrComments.set(record.hrReview || '');
     this.reviewEditingHrRating.set(record.hrRating ?? null);
-    this.reviewEditingStatus.set(record.status || 'Reviewed');
+    this.reviewEditingStatus.set('Reviewed');
   }
 
   closeRecordReview(): void {
@@ -326,7 +326,7 @@ export class App implements OnDestroy {
       teamLeadRating: this.reviewEditingLeadRating(),
       hrReview: this.reviewEditingHrComments().trim(),
       hrRating: this.reviewEditingHrRating(),
-      status: this.reviewEditingStatus(),
+      status: 'Reviewed',
       updatedAt: new Date().toISOString()
     };
 

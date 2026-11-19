@@ -53,4 +53,46 @@ npm test
 ```powershell
 npm run build
 ```
-Production artifacts will be placed in `dist/MPI_Frontend`.
+Production artifacts will be placed in `dist/MPI_Frontend/browser`.
+
+---
+
+## ☁️ Deploying to Vercel
+
+The project is fully configured for deployment on **Vercel** with automatic SPA routing and serverless function support for the `/api/records` endpoint and TOTP authentication.
+
+### Method 1: Deploy via Vercel CLI (Fastest)
+
+1. **Install Vercel CLI** (if not already installed):
+   ```bash
+   npm i -g vercel
+   ```
+
+2. **Deploy to Preview**:
+   ```bash
+   vercel
+   ```
+   Follow the CLI prompts:
+   - Link to existing project? **No** (or link to yours)
+   - What's your project's name? `mpi-frontend`
+   - In which directory is your code located? `./`
+   - Want to modify these settings? **No** (the settings from `vercel.json` are auto-applied)
+
+3. **Deploy to Production**:
+   ```bash
+   vercel --prod
+   ```
+
+### Method 2: Deploy via GitHub / GitLab / Bitbucket
+
+1. Push your repository to **GitHub**.
+2. Go to [vercel.com](https://vercel.com) and click **"Add New..."** → **"Project"**.
+3. Import your repository.
+4. Vercel automatically detects the project and applies `vercel.json`:
+   - **Framework Preset**: Other / Angular
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist/MPI_Frontend/browser`
+5. *(Optional)* Under **Environment Variables**, add:
+   - `TOTP_SECRET`: Your custom TOTP secret key for Team Lead authentication (defaults to `MPSR2236TLREVKEY` if omitted).
+   - *(Optional)* Vercel KV store (`KV_REST_API_URL` & `KV_REST_API_TOKEN`) for persistent cloud storage.
+6. Click **Deploy**.

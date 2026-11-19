@@ -48,7 +48,7 @@ export class RecordsService {
   }
 
   /**
-   * Verifies 6-digit TOTP code against Netlify serverless function
+   * Verifies 6-digit TOTP code against serverless function (/api/records or /.netlify/functions/records)
    */
   verifyTotp(code: string): Observable<{ success: boolean; message?: string; error?: string }> {
     const clean = code.trim().replace(/\D/g, '');
@@ -60,17 +60,17 @@ export class RecordsService {
       return of({ success: true, message: 'Offline/Test Mode' });
     }
 
-    const fnUrl = `${window.location.origin}/.netlify/functions/records`;
     const apiUrl = `${window.location.origin}/api/records`;
+    const fnUrl = `${window.location.origin}/.netlify/functions/records`;
 
     return this.http.post<{ success: boolean; verified?: boolean; message?: string; error?: string }>(
-      fnUrl,
+      apiUrl,
       { action: 'verify_totp', code: clean }
     ).pipe(
       map(res => ({ success: !!res.success, message: res.message, error: res.error })),
       catchError(err => {
         return this.http.post<{ success: boolean; verified?: boolean; message?: string; error?: string }>(
-          apiUrl,
+          fnUrl,
           { action: 'verify_totp', code: clean }
         ).pipe(
           map(res => ({ success: !!res.success, message: res.message, error: res.error })),
@@ -86,7 +86,7 @@ export class RecordsService {
   }
 
   /**
-   * Refreshes records from Netlify Functions direct endpoint or /api/records or fallback static /records.json
+   * Refreshes records from /api/records or Netlify Functions direct endpoint or fallback static /records.json
    */
   refreshRecords(): Observable<RecordsDatabase> {
     this.isLoading.set(true);
@@ -98,15 +98,15 @@ export class RecordsService {
       return of(this.records());
     }
 
-    const fnUrl = `${window.location.origin}/.netlify/functions/records`;
     const apiUrl = `${window.location.origin}/api/records`;
+    const fnUrl = `${window.location.origin}/.netlify/functions/records`;
     const jsonUrl = `${window.location.origin}/records.json`;
 
-    // Try Netlify direct function first, then /api/records, then static records.json
-    return this.http.get<{ success?: boolean; data?: RecordsDatabase }>(fnUrl).pipe(
+    // Try /api/records first (native Vercel), then Netlify direct function, then static records.json
+    return this.http.get<{ success?: boolean; data?: RecordsDatabase }>(apiUrl).pipe(
       map(res => (res && res.data) ? res.data : (res as unknown as RecordsDatabase)),
       catchError(() => {
-        return this.http.get<{ success?: boolean; data?: RecordsDatabase }>(apiUrl).pipe(
+        return this.http.get<{ success?: boolean; data?: RecordsDatabase }>(fnUrl).pipe(
           map(res => (res && res.data) ? res.data : (res as unknown as RecordsDatabase)),
           catchError(() => {
             return this.http.get<RecordsDatabase>(jsonUrl).pipe(
@@ -180,13 +180,13 @@ export class RecordsService {
       return of(updatedRecord);
     }
 
-    const fnUrl = `${window.location.origin}/.netlify/functions/records`;
     const apiUrl = `${window.location.origin}/api/records`;
+    const fnUrl = `${window.location.origin}/.netlify/functions/records`;
 
-    return this.http.post<{ success?: boolean; data?: SheetRecord }>(fnUrl, updatedRecord).pipe(
+    return this.http.post<{ success?: boolean; data?: SheetRecord }>(apiUrl, updatedRecord).pipe(
       map(res => (res && res.data) ? res.data : updatedRecord),
       catchError(() => {
-        return this.http.post<{ success?: boolean; data?: SheetRecord }>(apiUrl, updatedRecord).pipe(
+        return this.http.post<{ success?: boolean; data?: SheetRecord }>(fnUrl, updatedRecord).pipe(
           map(res => (res && res.data) ? res.data : updatedRecord),
           catchError(() => of(updatedRecord))
         );

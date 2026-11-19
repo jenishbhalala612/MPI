@@ -619,28 +619,12 @@
             </div>
           </div>
 
-          <!-- Mode Switcher -->
+          <!-- PDF Preview Indicator -->
           <div class="mode-toggle-group">
-            <button
-              type="button"
-              class="mode-toggle-btn"
-              [class.active]="previewMode() === 'sheet'"
-              (click)="previewMode.set('sheet')"
-              title="View formatted A4 sheet"
-            >
-              <span class="btn-label-desktop">📄 Sheet View</span>
-              <span class="btn-label-mobile">Sheet</span>
-            </button>
-            <button
-              type="button"
-              class="mode-toggle-btn"
-              [class.active]="previewMode() === 'pdf'"
-              (click)="previewMode.set('pdf')"
-              title="View embedded PDF plugin"
-            >
-              <span class="btn-label-desktop">📑 PDF Plugin</span>
+            <div class="mode-toggle-btn active" title="Official PDF Preview">
+              <span class="btn-label-desktop">📑 PDF Preview</span>
               <span class="btn-label-mobile">PDF</span>
-            </button>
+            </div>
           </div>
 
           <!-- Header Actions: Download, Close -->
@@ -671,113 +655,26 @@
           </div>
         </div>
 
-        <!-- Modal Body (The Preview Content) -->
+        <!-- Modal Body (Direct PDF Document Preview) -->
         <div class="preview-modal-body">
-          @if (previewMode() === 'sheet') {
-            <div class="sheet-scroll-container">
-              <div class="sheet-paper">
-                <!-- Header: Employee Name & Month Year -->
-                <div class="sheet-header">
-                  <span class="sheet-emp-name">{{ employeeName().trim() || 'MPI SHEET' }}</span>
-                  <span class="sheet-date">{{ currentMonthYearDisplay() }}</span>
-                </div>
-
-                <!-- 1. Points Box -->
-                <div class="sheet-points-box">
-                  @if (pointsList().length === 0) {
-                    <span class="sheet-placeholder">No points provided.</span>
-                  } @else {
-                    @for (pt of pointsList(); track $index) {
-                      <div class="sheet-point-row">
-                        <span class="sheet-point-bullet">▶</span>
-                        <span class="sheet-point-text">{{ pt }}</span>
-                      </div>
-                    }
-                  }
-                </div>
-
-                <!-- 2. Extraordinary Section -->
-                <div class="sheet-section">
-                  <div class="sheet-section-title-row">
-                    <span class="sheet-section-title">Extraordinary</span>
-                  </div>
-                  <div class="sheet-card-box">
-                    @if (extraCurricularActivity().trim()) {
-                      <span>{{ extraCurricularActivity().trim() }}</span>
-                    } @else {
-                      <span class="sheet-placeholder">Extraordinary Contributions / Notes</span>
-                    }
-                  </div>
-                </div>
-
-                <!-- 3. Team Lead Review Section -->
-                <div class="sheet-section">
-                  <div class="sheet-section-title-row">
-                    <span class="sheet-section-title">Team Lead Review</span>
-                    <div class="sheet-rating-row">
-                      <span>Rating: </span>
-                      <div class="sheet-rating-box">
-                        @if (seniorRating()) {
-                          <span class="sheet-rating-val">{{ seniorRating() }}</span>
-                        }
-                      </div>
-                      <span> / 10</span>
-                    </div>
-                  </div>
-                  <div class="sheet-card-box">
-                    @if (seniorReview().trim()) {
-                      <span>{{ seniorReview().trim() }}</span>
-                    } @else {
-                      <span class="sheet-placeholder">Review Comments / Notes</span>
-                    }
-                  </div>
-                </div>
-
-                <!-- 4. HR Review & Approval Section -->
-                <div class="sheet-section">
-                  <div class="sheet-section-title-row">
-                    <span class="sheet-section-title">HR Review & Approval</span>
-                    <div class="sheet-rating-row">
-                      <span>Rating: </span>
-                      <div class="sheet-rating-box">
-                        @if (hrRating()) {
-                          <span class="sheet-rating-val">{{ hrRating() }}</span>
-                        }
-                      </div>
-                      <span> / 10</span>
-                    </div>
-                  </div>
-                  <div class="sheet-card-box">
-                    @if (hrReview().trim()) {
-                      <span>{{ hrReview().trim() }}</span>
-                    } @else {
-                      <span class="sheet-placeholder">HR Remarks</span>
-                    }
-                  </div>
-                </div>
-
-                <!-- 5. Footer -->
-                <div class="sheet-footer">
-                  <span>MPI Sheet System — Confidential & Proprietary</span>
-                  <span>Page 1 of 1</span>
-                </div>
-              </div>
-            </div>
-          }
-
-          @if (previewMode() === 'pdf') {
+          @if (pdfSafeUrl()) {
             <object
-              [data]="pdfDataUrl() || pdfSafeUrl()"
+              [data]="pdfSafeUrl()"
               type="application/pdf"
               class="pdf-iframe modal-pdf-iframe"
               title="MPI Sheet Generated PDF Preview"
             >
               <embed
-                [src]="pdfDataUrl() || pdfSafeUrl()"
+                [src]="pdfSafeUrl()"
                 type="application/pdf"
                 class="pdf-iframe modal-pdf-iframe"
               />
             </object>
+          } @else {
+            <div class="pdf-loading-state">
+              <span class="spinner"></span>
+              <span>Loading PDF Document...</span>
+            </div>
           }
         </div>
       </div>

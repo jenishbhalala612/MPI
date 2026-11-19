@@ -47,7 +47,7 @@ export class App implements OnDestroy {
 
   // PDF Preview State
   readonly isPreviewModalOpen = signal<boolean>(false);
-  readonly previewMode = signal<'sheet' | 'pdf'>('sheet');
+  readonly previewMode = signal<'sheet' | 'pdf'>('pdf');
   readonly pdfBlob = signal<Blob | null>(null);
   readonly pdfRawUrl = signal<string | null>(null);
   readonly pdfSafeUrl = signal<SafeResourceUrl | null>(null);

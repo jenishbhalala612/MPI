@@ -121,6 +121,55 @@ export class App implements OnDestroy {
     return text.split(/\r?\n/).filter(line => line.trim().length > 0).length;
   });
 
+  readonly pointsPageInfo = computed(() => {
+    const raw = this.points().trim();
+    if (!raw) {
+      return { count: 0, estimatedPages: 0, isFull: false, label: '', badgeClass: '' };
+    }
+
+    const lines = raw.split(/\r?\n/).map(p => p.trim()).filter(p => p.length > 0);
+    const count = lines.length;
+
+    // Line capacity model based on 527pt box width (~105 chars per line):
+    // Page 1 has 522pt usable height (~45 lines)
+    // Page 2 has 735pt usable height (~64 lines)
+    // Total 2 pages = ~109 lines
+    let totalLines = 0;
+    for (const pt of lines) {
+      const clean = pt.replace(/^(\d+[\.\)\-:]|\*|\-|•|▪|–)\s*/, '').trim();
+      const ptLines = Math.max(1, Math.ceil(clean.length / 105));
+      totalLines += ptLines;
+    }
+
+    const effectiveLines = totalLines + (count * 0.3); // account for 3.5pt gap between points
+
+    if (effectiveLines <= 45) {
+      return {
+        count,
+        estimatedPages: 1,
+        isFull: false,
+        label: `${count} ${count === 1 ? 'point' : 'points'} • Page 1`,
+        badgeClass: 'page1'
+      };
+    } else if (effectiveLines <= 109) {
+      return {
+        count,
+        estimatedPages: 2,
+        isFull: false,
+        label: `${count} points • Page 2`,
+        badgeClass: 'page2'
+      };
+    } else {
+      return {
+        count,
+        estimatedPages: 2,
+        isFull: true,
+        label: `${count} points • ⚠️ 2 Pages Full (Max Limit)`,
+        badgeClass: 'full'
+      };
+    }
+  });
+
   readonly pointsList = computed(() => {
     const raw = this.points().trim();
     if (!raw) return [];

@@ -175,8 +175,37 @@
   color: #94a3b8;
   background: #191e2b;
   border: 1px solid #283144;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: var(--radius-pill);
+  transition: all 0.2s ease;
+}
+
+.points-badge.page1 {
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.points-badge.page2 {
+  color: #a78bfa;
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.points-badge.full {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+  font-weight: 600;
+}
+
+.points-capacity-hint {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .input-wrapper {

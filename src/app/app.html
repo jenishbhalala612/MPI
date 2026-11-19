@@ -136,8 +136,10 @@
                 MPI Sheet Points
                 <span class="required-dot" title="Required field"></span>
               </label>
-              @if (pointsCount() > 0) {
-                <span class="points-badge">{{ pointsCount() }} {{ pointsCount() === 1 ? 'point' : 'points' }}</span>
+              @if (pointsPageInfo().count > 0) {
+                <span class="points-badge" [class]="pointsPageInfo().badgeClass">
+                  {{ pointsPageInfo().label }}
+                </span>
               }
             </div>
 
@@ -149,6 +151,9 @@
               (ngModelChange)="points.set($event)"
               placeholder="Enter MPI sheet points here...&#10;&#10;1. Point one&#10;2. Point two&#10;3. Point three"
             ></textarea>
+            <div class="points-capacity-hint">
+              <span>📄 2-Page Capacity: ~50–60 typical points (or ~80 short points). Page 1 holds ~25; Page 2 holds ~35.</span>
+            </div>
           </div>
 
           <!-- Right Column: Extraordinary -->
